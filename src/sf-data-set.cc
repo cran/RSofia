@@ -26,11 +26,17 @@
 #include <iostream>
 #include <fstream>
 
+#include "R.h"
 #include "sf-data-set.h"
 
 //----------------------------------------------------------------//
 //------------------ SfDataSet Public Methods --------------------//
 //----------------------------------------------------------------//
+
+SfDataSet::SfDataSet(bool use_bias_term, size_t reserve) : use_bias_term_(use_bias_term) {
+  if(reserve > 0)
+    vectors_.reserve(reserve);
+}
 
 SfDataSet::SfDataSet(bool use_bias_term)
   : use_bias_term_(use_bias_term) {
@@ -45,8 +51,9 @@ SfDataSet::SfDataSet(const string& file_name,
   std::ifstream file_stream(file_name.c_str(), std::ifstream::in);
   file_stream.rdbuf()->pubsetbuf(local_buffer, buffer_size); 
   if (!file_stream) {
-    std::cerr << "Error reading file " << file_name << std::endl;
-    exit(1);
+    //std::cerr << "Error reading file " << file_name << std::endl;
+    //exit(1);
+    error("Error reading file %s ", file_name.c_str());
   }
 
   string line_string;
@@ -65,9 +72,14 @@ string SfDataSet::AsString() const {
   return out_string;
 }
 
+//mk edit, assertions should not be made in code called from R
 const SfSparseVector& SfDataSet::VectorAt(long int index) const {
-  assert (index >= 0 &&
+  bool good = (index >= 0 &&
 	  static_cast<unsigned long int>(index) < vectors_.size());
+
+  if(!good)
+    error("index out of range\n");
+
   return vectors_[index];
 }
 

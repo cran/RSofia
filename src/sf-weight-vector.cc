@@ -27,6 +27,8 @@
 #include <sstream>
 #include <string>
 
+#include <R.h>
+
 #include "sf-weight-vector.h"
 
 //----------------------------------------------------------------//
@@ -38,17 +40,19 @@ SfWeightVector::SfWeightVector(int dimensionality)
     squared_norm_(0.0),
     dimensions_(dimensionality) {
   if (dimensions_ <= 0) {
-    std::cerr << "Illegal dimensionality of weight vector less than 1."
-	      << std::endl
-	      << "dimensions_: " << dimensions_ << std::endl;
-    exit(1);
+    //std::cerr << "Illegal dimensionality of weight vector less than 1."
+	//      << std::endl
+	//      << "dimensions_: " << dimensions_ << std::endl;
+    //exit(1);
+    error("Illegal dimensionality of weight vector less than 1.");
   }
 
   weights_ = new float[dimensions_];
   if (weights_ == NULL) {
-    std::cerr << "Not enough memory for weight vector of dimension: " 
-	      <<  dimensions_ << std::endl;
-    exit(1);
+    //std::cerr << "Not enough memory for weight vector of dimension: " 
+	//      <<  dimensions_ << std::endl;
+    //exit(1);
+    error("Not enought memory for weight vector of dimension: %i ", dimensions_);
   }
   for (int i = 0; i < dimensions_; ++i) {
     weights_[i] = 0;
@@ -69,9 +73,10 @@ SfWeightVector::SfWeightVector(const string& weight_vector_string)
   // Allocate weights_.
   weights_ = new float[dimensions_];
   if (weights_ == NULL) {
-    std::cerr << "Not enough memory for weight vector of dimension: " 
-	      <<  dimensions_ << std::endl;
-    exit(1);
+    //std::cerr << "Not enough memory for weight vector of dimension: " 
+	//      <<  dimensions_ << std::endl;
+    //exit(1);
+    error("Not enought memory for weight vector of dimension: %i ", dimensions_);
   }
   
   // Fill weights_ from weights in string.
@@ -89,9 +94,10 @@ SfWeightVector::SfWeightVector(const SfWeightVector& weight_vector) {
 
   weights_ = new float[dimensions_];
   if (weights_ == NULL) {
-    std::cerr << "Not enough memory for weight vector of dimension: " 
-	      <<  dimensions_ << std::endl;
-    exit(1);
+    //std::cerr << "Not enough memory for weight vector of dimension: " 
+	//      <<  dimensions_ << std::endl;
+    //exit(1);
+    error("Not enought memory for weight vector of dimension: %i ", dimensions_);
   }
 
   for (int i = 0; i < dimensions_; ++i) {
@@ -141,11 +147,13 @@ float SfWeightVector::InnerProductOnDifference(const SfSparseVector& a,
 
 void SfWeightVector::AddVector(const SfSparseVector& x, float x_scale) {
   if (x.FeatureAt(x.NumFeatures() - 1) > dimensions_) {
-    std::cerr << "Feature " << x.FeatureAt(x.NumFeatures() - 1) 
-	      << " exceeds dimensionality of weight vector: " 
-	      << dimensions_ << std::endl;
-    std::cerr << x.AsString() << std::endl;
-    exit(1);
+    //std::cerr << "Feature " << x.FeatureAt(x.NumFeatures() - 1) 
+	//      << " exceeds dimensionality of weight vector: " 
+	//      << dimensions_ << std::endl;
+    //std::cerr << x.AsString() << std::endl;
+    //exit(1);
+    error("Feature %i exceeds dimensionality of weight vector: %i\n", 
+      x.FeatureAt(x.NumFeatures() - 1), dimensions_);
   }
 
   float inner_product = 0.0;
@@ -168,18 +176,21 @@ void SfWeightVector::ScaleBy(double scaling_factor) {
   if (scaling_factor > 0.0) {
     scale_ *= scaling_factor;
   } else {
-    std::cerr << "Error: scaling weight vector by non-positive value!\n " 
-	      << "This can cause numerical errors in PEGASOS projection.\n "
-	      << "This is likely due to too large a value of eta * lambda.\n "
-	      << std::endl;
-    exit(1);
+    //std::cerr << "Error: scaling weight vector by non-positive value!\n " 
+	//      << "This can cause numerical errors in PEGASOS projection.\n "
+	//      << "This is likely due to too large a value of eta * lambda.\n "
+	//      << std::endl;
+    //exit(1);
+
+    error("Error: scaling weight vector by non-positive value!\n");
   }
 }
 
 float SfWeightVector::ValueOf(int index) const {
   if (index < 0) {
-    std::cerr << "Illegal index " << index << " in ValueOf. " << std::endl;
-    exit(1);
+    //std::cerr << "Illegal index " << index << " in ValueOf. " << std::endl;
+    //exit(1);
+    error("Illegal index %i in ValueOf.\n", index);
   }
   if (index >= dimensions_) {
     return 0;
@@ -197,13 +208,13 @@ void SfWeightVector::ProjectToL1Ball(float lambda, float epsilon) {
   vector<float> non_zeros;
   for (int i = 0; i < dimensions_; ++i) {
     if (weights_[i] != 0.0) {
-      non_zeros.push_back(fabsf(weights_[i]));
+      non_zeros.push_back(std::fabs(weights_[i]));
     } else {
       continue;
     }
-    current_l1 += fabsf(weights_[i]);
-    if (fabs(weights_[i]) > max_value) {
-      max_value = fabs(weights_[i]);
+    current_l1 += std::fabs(weights_[i]);
+    if (std::fabs(weights_[i]) > max_value) {
+      max_value = std::fabs(weights_[i]);
     }
   }
   if (current_l1 <= (1.0 + epsilon) * lambda) return;
@@ -216,7 +227,7 @@ void SfWeightVector::ProjectToL1Ball(float lambda, float epsilon) {
     theta = (max + min) / 2.0;
     current_l1 = 0.0;
     for (unsigned int i = 0; i < non_zeros.size(); ++i) {
-      current_l1 += fmax(0, non_zeros[i] - theta);
+      current_l1 += std::max<float>(0, non_zeros[i] - theta);
     }
     if (current_l1 <= lambda) {
       max = theta;
@@ -226,8 +237,8 @@ void SfWeightVector::ProjectToL1Ball(float lambda, float epsilon) {
   }
 
   for (int i = 0; i < dimensions_; ++i) {
-    if (weights_[i] > 0) weights_[i] = fmax(0, weights_[i] - theta);
-    if (weights_[i] < 0) weights_[i] = fmin(0, weights_[i] + theta);
+    if (weights_[i] > 0) weights_[i] = std::max<float>(0, weights_[i] - theta);
+    if (weights_[i] < 0) weights_[i] = std::min<float>(0, weights_[i] + theta);
   } 
 }
 
@@ -236,7 +247,7 @@ void SfWeightVector::ProjectToL1Ball(float lambda) {
   // Bail out early if possible.
   float current_l1 = 0.0;
   for (int i = 0; i < dimensions_; ++i) {
-    if (fabsf(ValueOf(i)) > 0) current_l1 += fabsf(ValueOf(i));
+    if (std::fabs(ValueOf(i)) > 0) current_l1 += std::fabs(ValueOf(i));
   }
   if (current_l1 < lambda) return;
 
@@ -249,9 +260,9 @@ void SfWeightVector::ProjectToL1Ball(float lambda) {
   vector<int>* temp;
   // Populate U with all non-zero elements in weight vector.
   for (int i = 0; i < dimensions_; ++i) {
-    if (fabsf(ValueOf(i)) > 0) {
+    if (std::fabs(ValueOf(i)) > 0) {
       U->push_back(i);
-      current_l1 += fabsf(ValueOf(i));
+      current_l1 += std::fabs(ValueOf(i));
     }
   }
 
@@ -262,12 +273,12 @@ void SfWeightVector::ProjectToL1Ball(float lambda) {
     G->clear();
     L->clear();
     int k = (*U)[static_cast<int>(rand() % U->size())];
-    float pivot_k = fabsf(ValueOf(k));
-    float partial_sum_delta = fabsf(ValueOf(k));
+    float pivot_k = std::fabs(ValueOf(k));
+    float partial_sum_delta = std::fabs(ValueOf(k));
     float partial_pivot_delta = 1.0;
     // Partition U using pivot_k.
     for (unsigned int i = 0; i < U->size(); ++i) {
-      float w_i = fabsf(ValueOf((*U)[i]));
+      float w_i = std::fabs(ValueOf((*U)[i]));
       if (w_i >= pivot_k) {
 	if ((*U)[i] != k) {
 	  partial_sum_delta += w_i;
@@ -298,7 +309,7 @@ void SfWeightVector::ProjectToL1Ball(float lambda) {
   for (int i = 0; i < dimensions_; ++i) {
     if (ValueOf(i) == 0.0) continue;
     int sign = (ValueOf(i) > 0) ? 1 : -1;
-    weights_[i] = sign * fmax((sign * ValueOf(i) - theta), 0); 
+    weights_[i] = sign * std::max<float>((sign * ValueOf(i) - theta), 0); 
     squared_norm_ += weights_[i] * weights_[i];
   }
   scale_ = 1.0;

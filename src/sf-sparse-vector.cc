@@ -22,6 +22,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+
+#include <R.h>
 #include "sf-sparse-vector.h"
 
 //----------------------------------------------------------------//
@@ -105,7 +107,7 @@ string SfSparseVector::AsString() const {
 
 void SfSparseVector::PushPair(int id, float value) {
   if (id > 0 && NumFeatures() > 0 && id <= FeatureAt(NumFeatures() - 1) ) {
-    std::cerr << id << " vs. " << FeatureAt(NumFeatures() - 1) << std::endl;
+    //std::cerr << id << " vs. " << FeatureAt(NumFeatures() - 1) << std::endl;
     DieFormat("Features not in ascending sorted order.");
   }
 
@@ -121,8 +123,9 @@ void SfSparseVector::PushPair(int id, float value) {
 //----------------------------------------------------------------//
 
 void SfSparseVector::DieFormat(const string& reason) {
-  std::cerr << "Wrong format for input data:\n  " << reason << std::endl;
-  exit(1);
+  //std::cerr << "Wrong format for input data:\n  " << reason << std::endl;
+  //exit(1);
+  error("Wrong format for input data:\n %s ", reason.c_str());
 }
 
 void SfSparseVector::Init(const char* in_string) {
@@ -148,10 +151,8 @@ void SfSparseVector::Init(const char* in_string) {
 
   // Get feature:value pairs.
   for ( ;
-       (position < in_string + length 
-	&& position - 1 != NULL
-	&& position[0] != '#');
-       position = strchr(position, ' ') + 1) {
+       (position < in_string + length && position[0] != '#');
+      ) {
     
     // Consume multiple spaces, if needed.
     if (position[0] == ' ' || position[0] == '\n' ||
@@ -164,6 +165,9 @@ void SfSparseVector::Init(const char* in_string) {
     position = strchr(position, ':') + 1;
     float value = atof(position);
     PushPair(id, value);
+    position = strchr(position, ' ');
+    if(!position) break;
+    position++;
   }
 
   // Parse comment, if any.

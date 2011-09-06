@@ -24,7 +24,10 @@
 
 #include <Rcpp.h>
 #include "sf-data-set.h"
-#include "sofia_cmd.h"
+#include "sf-weight-vector.h"
+#include "sofia-ml-methods.h"
+#include "sf-hash-weight-vector.h"
+#include<ctime>
 
 class RSofiaFacade {
 
@@ -68,6 +71,7 @@ class RSofiaFacade {
       , const int hash_mask_bits
       , const bool no_bias_term
       , const bool verbose
+      , const int reserve
     );
     
     std::vector<float> predict(
